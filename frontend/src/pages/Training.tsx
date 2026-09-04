@@ -1,11 +1,11 @@
 import {useEffect,useState} from 'react';
-import {Chess} from 'chess.js'; import {Chessboard} from 'react-chessboard'; import {api} from '../lib/api';
-type Task={id:string;category:string;title:string;priority:string;fen:string;prompt:string;solution_uci:string;explanation:string};
+import {api} from '../lib/api';
+import PuzzleTrainer from '../components/PuzzleTrainer';
+type Theme={id:string;name:string;description:string};
 export default function Training(){
- const [tasks,setTasks]=useState<Task[]>([]),[task,setTask]=useState<Task|null>(null),[game,setGame]=useState<Chess|null>(null),[result,setResult]=useState<'ok'|'bad'|null>(null);
- useEffect(()=>{api<Task[]>('/api/training').then(setTasks)},[]);
- function start(t:Task){setTask(t);setGame(new Chess(t.fen));setResult(null)}
- function drop(s:string,t:string){if(!task||!game||result==='ok')return false;const uci=s+t;const next=new Chess(game.fen());try{const m=next.move({from:s,to:t,promotion:'q'});if(!m)return false;setGame(next);setResult(uci===task.solution_uci?'ok':'bad');return true}catch{return false}}
- if(task&&game)return <div><button className="backBtn" onClick={()=>setTask(null)}>← К ТРЕНИРОВКАМ</button><div className="trainingPlay"><section className="boardCard"><Chessboard options={{position:game.fen(),boardOrientation:task.fen.includes(' w ')?'white':'black',onPieceDrop:({sourceSquare,targetSquare})=>!!targetSquare&&drop(sourceSquare,targetSquare)}}/></section><aside className="card trainingPrompt"><span className="tag">{task.category}</span><h2>{task.title}</h2><p>{task.prompt}</p>{result&&<div className={result==='ok'?'result ok':'result bad'}><b>{result==='ok'?'ТОЧНО':'ПОПРОБУЙ ЕЩЁ'}</b><p>{result==='ok'?task.explanation:'Этот ход не является решением. Вернись и проверь шахи, взятия и угрозы.'}</p></div>}{result==='bad'&&<button className="secondary" onClick={()=>start(task)}>СБРОСИТЬ ПОЗИЦИЮ</button>}{result==='ok'&&<button className="primary" onClick={()=>setTask(null)}>СЛЕДУЮЩАЯ ЗАДАЧА</button>}</aside></div></div>;
- return <div><div className="sectionIntro"><h2>ПЕРСОНАЛЬНЫЕ ТРЕНИРОВКИ</h2><p>Пока нет истории твоих ошибок, поэтому доступны стартовые задачи. После партий этот раздел будет заполняться твоими собственными позициями.</p></div><div className="trainingGrid">{tasks.map(t=><button className="trainCard card" key={t.id} onClick={()=>start(t)}><span className="tag">{t.priority}</span><h3>{t.category}</h3><b>{t.title}</b><p>{t.prompt}</p><span className="lessonGo">ТРЕНИРОВАТЬ →</span></button>)}</div></div>
+ const [themes,setThemes]=useState<Theme[]>([]),[active,setActive]=useState<Theme|null>(null),[q,setQ]=useState('');
+ useEffect(()=>{api<Theme[]>('/api/training/themes').then(setThemes)},[]);
+ if(active)return <div><button className="backBtn" onClick={()=>setActive(null)}>← К ТРЕНАЖЁРАМ</button><PuzzleTrainer theme={active.id}/></div>;
+ const list=themes.filter(x=>(x.name+x.description).toLowerCase().includes(q.toLowerCase()));
+ return <div><div className="sectionIntro"><div className="sectionCode">TRAIN//OPEN DATA</div><h2>ТРЕНАЖЁРЫ // {themes.length} ТЕМ</h2><p>Задачи подгружаются из открытой базы Lichess. Это не шесть зашитых примеров: каждый запуск выдаёт новую реальную позицию.</p></div><input className="search" placeholder="ПОИСК ТЕМЫ…" value={q} onChange={e=>setQ(e.target.value)}/><div className="trainingGrid">{list.map(t=><button className="trainCard card" key={t.id} onClick={()=>setActive(t)}><span className="tag">{t.id}</span><h3>{t.name}</h3><p>{t.description}</p><span className="lessonGo">ТРЕНИРОВАТЬ →</span></button>)}</div></div>
 }
