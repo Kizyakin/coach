@@ -1,0 +1,16 @@
+{
+  "name": "chess-coach-ru",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {"dev":"vite","build":"tsc -b && vite build","preview":"vite preview"},
+  "dependencies": {
+    "@vitejs/plugin-react":"latest",
+    "chess.js":"latest",
+    "lucide-react":"latest",
+    "react":"latest",
+    "react-chessboard":"latest",
+    "react-dom":"latest"
+  },
+  "devDependencies": {"@types/react":"latest","@types/react-dom":"latest","typescript":"latest","vite":"latest"}
+}

@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: chess-coach-api
+    runtime: docker
+    plan: free
+    rootDir: backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chess-coach-db
+          property: connectionString
+      - key: STOCKFISH_PATH
+        value: /usr/games/stockfish
+      - key: FRONTEND_ORIGIN
+        sync: false
+  - type: web
+    name: chess-coach-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+
+databases:
+  - name: chess-coach-db
+    plan: free
+    databaseName: chess_coach
+    user: chess_coach

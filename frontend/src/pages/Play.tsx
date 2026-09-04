@@ -1,0 +1,1 @@
+import CoachBoard from '../components/CoachBoard'; export default function Play(){return <><div className="sectionIntro"><h2>Тренировочная партия</h2><p>Играй против Stockfish. Тренер объясняет позицию после каждого хода и постепенно уменьшает помощь.</p></div><CoachBoard mode="play"/></>}

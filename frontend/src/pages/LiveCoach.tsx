@@ -1,0 +1,1 @@
+import CoachBoard from '../components/CoachBoard'; export default function LiveCoach(){return <><div className="sectionIntro"><h2>Live Coach</h2><p>Вводи ходы своей живой партии с другом вручную. Режим не подключается к Chess.com или Lichess и предназначен для обучения.</p></div><CoachBoard mode="live"/></>}
