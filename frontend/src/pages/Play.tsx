@@ -1,1 +1,2 @@
-import CoachBoard from '../components/CoachBoard'; export default function Play(){return <><div className="sectionIntro"><h2>Тренировочная партия</h2><p>Играй против Stockfish. Тренер объясняет позицию после каждого хода и постепенно уменьшает помощь.</p></div><CoachBoard mode="play"/></>}
+import CoachBoard from '../components/CoachBoard';
+export default function Play(){return <><div className="sectionIntro"><div className="sectionCode">PLAY//ENGINE</div><h2>ПАРТИЯ ПРОТИВ ДВИЖКА</h2><p>Выбери сторону. Если ты играешь чёрными — движок автоматически делает первый ход белыми. Если играешь белыми — первый ход по правилам за тобой. После каждого хода Coach показывает точный лучший ход, кандидатов и объяснение.</p></div><CoachBoard mode="play"/></>}

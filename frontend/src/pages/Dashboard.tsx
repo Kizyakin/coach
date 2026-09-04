@@ -1,7 +1,11 @@
-export default function Dashboard({go}:{go:(p:any)=>void}){return <div className="grid dashboard">
-<section className="hero card"><div><div className="eyebrow">СЕГОДНЯ</div><h2>Тренируем угрозы соперника</h2><p>За последние партии ты чаще всего ошибался, когда продолжал свой план и не замечал, что изменил ход соперника.</p><div className="actions"><button className="primary" onClick={()=>go('Тренировки')}>Начать тренировку</button><button className="secondary" onClick={()=>go('Играть')}>Сыграть партию</button></div></div><div className="scoreRing"><b>41</b><span>уровень</span></div></section>
-<section className="card"><h3>Слабые места</h3><div className="metric"><span>Угрозы соперника</span><b>22%</b></div><div className="bar"><i style={{width:'78%'}}/></div><div className="metric"><span>Матовые идеи</span><b>18%</b></div><div className="bar"><i style={{width:'82%'}}/></div><div className="metric"><span>Потеря фигур</span><b>14%</b></div><div className="bar"><i style={{width:'86%'}}/></div></section>
-<section className="card"><h3>Твои рейтинги</h3><div className="ratingRow"><span>Chess Coach</span><b>1038</b><em>+42</em></div><div className="ratingRow"><span>Chess.com Rapid</span><b>—</b></div><div className="ratingRow"><span>Lichess Rapid</span><b>—</b></div><button className="textBtn" onClick={()=>go('Профиль')}>Подключить аккаунты →</button></section>
-<section className="card wide"><h3>Продолжить обучение</h3><div className="lessonStrip"><div><span className="tag">Мышление</span><h4>Что изменил последний ход соперника?</h4><p>4 шага · ~7 минут</p></div><button className="secondary" onClick={()=>go('Учиться')}>Продолжить</button></div></section>
-<section className="card"><h3>Изучаемые дебюты</h3><div className="openingMini"><b>Итальянская партия</b><span>понимание 68%</span></div><div className="openingMini"><b>Каро-Канн</b><span>понимание 34%</span></div><button className="textBtn" onClick={()=>go('Дебюты')}>Открыть репертуар →</button></section>
-</div>}
+export default function Dashboard({go}:{go:(p:any)=>void}){
+ return <div className="dashboard">
+  <section className="hero card"><div className="heroCode">READY //</div><h2>ШАХМАТЫ БЕЗ ДОГАДОК</h2><p>Пока профиль пуст. Сыграй первую тренировочную партию или подключи Chess.com / Lichess — после этого здесь появятся только реальные данные.</p><div className="actions"><button className="primary" onClick={()=>go('Играть')}>СЫГРАТЬ ПАРТИЮ</button><button className="secondary" onClick={()=>go('Профиль')}>ПОДКЛЮЧИТЬ АККАУНТ</button></div></section>
+  <div className="dashboardGrid">
+   <section className="card statEmpty"><span>ПАРТИИ</span><b>0</b><p>Нет данных</p></section>
+   <section className="card statEmpty"><span>ЧАСТАЯ ОШИБКА</span><b>—</b><p>Появится после анализа партий</p></section>
+   <section className="card statEmpty"><span>ДЕБЮТ</span><b>—</b><p>Добавь дебют в тренировке</p></section>
+   <section className="card nextAction"><span>С ЧЕГО НАЧАТЬ</span><h3>Проверь базовый алгоритм мышления</h3><p>Угроза → мат → шах → взятие → атака → план.</p><button className="textBtn" onClick={()=>go('Учиться')}>ОТКРЫТЬ УРОКИ →</button></section>
+  </div>
+ </div>
+}

@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 import chess
 from app.data.lessons import LESSONS
 from app.data.openings import OPENINGS
+from app.data.training import TRAINING_TASKS
 from app.services.coach import explain_position
 from app.services.engine import engine_service
 from app.services.review import review_pgn
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/api")
 class FenRequest(BaseModel):
     fen: str
     depth: int = Field(12, ge=6, le=20)
+    player_side: str | None = None
 
 class MoveRequest(BaseModel):
     fen: str
@@ -28,6 +30,11 @@ def health(): return {"ok": True, "service":"Шахматный тренер"}
 
 @router.get("/lessons")
 def lessons(): return LESSONS
+
+@router.get("/training")
+def training(category: str | None = None):
+    if not category: return TRAINING_TASKS
+    return [t for t in TRAINING_TASKS if t["category"].lower() == category.lower()]
 
 @router.get("/openings")
 def openings(q: str | None = None):
