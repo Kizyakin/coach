@@ -9,6 +9,8 @@ from app.services.notation import move_ru
 from app.services.review import review_pgn
 from app.services.external import chesscom_games, lichess_games
 from app.services.open_data import load_lichess_openings, fetch_lichess_puzzle, lesson_catalog, THEME_RU
+from app.services.master_library import master_library
+from app.data.master_players import MASTER_PLAYERS
 
 router=APIRouter(prefix="/api")
 
@@ -23,7 +25,13 @@ class ReviewRequest(BaseModel):
     pgn:str; depth:int=Field(9,ge=6,le=14)
 
 @router.get('/health')
-def health(): return {'ok':True,'service':'Шахматный тренер','version':'1.3'}
+def health(): return {'ok':True,'service':'Шахматный тренер','version':'1.4','master_library':master_library.status()}
+
+@router.get('/masters')
+def masters(): return MASTER_PLAYERS
+
+@router.get('/masters/status')
+def masters_status(): return master_library.status()
 
 @router.get('/lessons')
 def lessons(): return lesson_catalog()

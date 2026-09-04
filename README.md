@@ -81,3 +81,20 @@ npm run dev
 `позиция → chess logic → Stockfish → Coach → русское объяснение → Player Model`
 
 Это позволяет улучшать объяснения и классификацию ошибок в одном месте, не переписывая Play, Live Coach, Review и Training отдельно.
+
+## Master Games Coach (v1.4)
+
+В проект добавлен case-based слой на партиях 45 великих и современных игроков. Список доступен через `/api/masters`.
+
+Чтобы собрать локальную компактную библиотеку практических позиций:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/build_master_library.py --players 45 --games-per-player 60 --positions-per-game 12
+cd ..
+```
+
+После этого закоммить `backend/app/data/master_library/master_positions.json.gz` и отправь его в GitHub. Raw PGN не сохраняются.

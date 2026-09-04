@@ -15,7 +15,7 @@ class EngineService:
         for info in infos:
             score = info["score"].pov(board.turn)
             mate = score.mate(); cp = score.score(mate_score=100000)
-            pv = info.get("pv", [])[:10]
+            pv = info.get("pv", [])[:12]
             san=[]; tmp=board.copy()
             for move in pv:
                 try: san.append(tmp.san(move)); tmp.push(move)
@@ -23,6 +23,7 @@ class EngineService:
             result.append({
                 "score_cp": cp, "mate": mate,
                 "move_uci": pv[0].uci() if pv else None,
+                "pv_uci":[m.uci() for m in pv],
                 "line_san": san,
                 "line_ru": line_ru(board, pv),
             })
