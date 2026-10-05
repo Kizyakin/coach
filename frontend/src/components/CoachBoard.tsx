@@ -3,18 +3,176 @@ import {Chess} from 'chess.js';
 import {Chessboard} from 'react-chessboard';
 import {api} from '../lib/api';
 
-type Mode='play'|'live'; type Side='white'|'black'; type Notation='ru'|'san';
-function build(history:string[]){const g=new Chess();for(const u of history){try{g.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'} as any)}catch{break}}return g}
+type Mode='play'|'live';
+type Side='white'|'black';
+type Notation='ru'|'san';
+type Speed='fast'|'balanced'|'deep';
+
+function build(history:string[]){
+  const g=new Chess();
+  for(const u of history){
+    try{g.move({from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'} as any)}catch{break}
+  }
+  return g;
+}
+
 export default function CoachBoard({mode}:{mode:Mode}){
- const [historyUci,setHistoryUci]=useState<string[]>([]),[historySan,setHistorySan]=useState<string[]>([]),[coach,setCoach]=useState<any>(null),[busy,setBusy]=useState(false),[side,setSide]=useState<Side>('white'),[depth,setDepth]=useState(10),[notation,setNotation]=useState<Notation>('ru'),[outcome,setOutcome]=useState('');
- const game=useMemo(()=>build(historyUci),[historyUci]); const turn=game.turn();
- async function analyze(g=game,h=historyUci){setBusy(true);try{setCoach(await api('/api/coach/analyze',{method:'POST',body:JSON.stringify({fen:g.fen(),depth,player_side:side,history_uci:h})}))}catch(e:any){setCoach({error:e.message})}finally{setBusy(false)}}
- function checkOutcome(g:Chess){if(g.isCheckmate())return `МАТ // победили ${g.turn()==='w'?'чёрные':'белые'}`;if(g.isStalemate())return 'ПАТ // ничья';if(g.isThreefoldRepetition())return 'ТРОЕКРАТНОЕ ПОВТОРЕНИЕ // можно заявить ничью';if(g.isDraw())return 'НИЧЬЯ';return ''}
- async function botMove(h:string[]){const g=build(h);if(g.isGameOver())return;setBusy(true);try{const r:any=await api('/api/engine/move',{method:'POST',body:JSON.stringify({fen:g.fen(),depth:Math.max(8,depth-1),history_uci:h,player_side:side})});if(r.move_uci){const nh=[...h,r.move_uci],ng=build(nh);setHistoryUci(nh);setHistorySan(x=>[...x,r.move_san]);setOutcome(checkOutcome(ng));await analyze(ng,nh)}}catch(e:any){setCoach({error:e.message})}finally{setBusy(false)}}
- function drop(s:string,t:string){if(busy||outcome)return false;if(mode==='play'&&turn!==side[0])return false;const preview=build(historyUci);let m:any;try{m=preview.move({from:s,to:t,promotion:'q'} as any)}catch{return false}if(!m)return false;const u=s+t+(m.promotion||''),nh=[...historyUci,u],ng=build(nh);setHistoryUci(nh);setHistorySan(x=>[...x,m.san]);const end=checkOutcome(ng);setOutcome(end);analyze(ng,nh);if(mode==='play'&&!end&&!ng.isGameOver())setTimeout(()=>botMove(nh),320);return true}
- function reset(newSide=side){setHistoryUci([]);setHistorySan([]);setCoach(null);setOutcome('');if(mode==='play'&&newSide==='black')setTimeout(()=>botMove([]),220)}
- function chooseSide(s:Side){setSide(s);reset(s)}
- const evalText=useMemo(()=>{const cp=coach?.best_move?.score_cp;if(cp==null)return '—';if(Math.abs(cp)>90000)return coach?.best_move?.mate?`мат ${Math.abs(coach.best_move.mate)}`:'—';return `${cp>=0?'+':''}${(cp/100).toFixed(2)}`},[coach]);
- const label=(c:any)=>notation==='ru'?c?.move_ru:c?.move_san; const line=(c:any)=>notation==='ru'?c?.line_ru:c?.line_san;
- return <div className="gameShell"><div className="gameToolbar"><div className="segmented"><span>{mode==='live'?'МОЯ СТОРОНА / ВИД':'МОЯ СТОРОНА'}</span><button className={side==='white'?'selected':''} onClick={()=>chooseSide('white')}>БЕЛЫЕ</button><button className={side==='black'?'selected':''} onClick={()=>chooseSide('black')}>ЧЁРНЫЕ</button></div><div className="turnStatus"><i className={turn==='w'?'whiteDot':'blackDot'}></i><span>ХОД // {turn==='w'?'БЕЛЫЕ':'ЧЁРНЫЕ'}</span></div><div className="segmented"><span>НОТАЦИЯ</span><button className={notation==='ru'?'selected':''} onClick={()=>setNotation('ru')}>РУС</button><button className={notation==='san'?'selected':''} onClick={()=>setNotation('san')}>SAN</button></div><div className="segmented"><span>ГЛУБИНА</span>{[8,10,12].map(d=><button key={d} className={depth===d?'selected':''} onClick={()=>setDepth(d)}>{d===8?'FAST':d===10?'NORMAL':'DEEP'}</button>)}</div></div>{mode==='live'&&<div className="liveRule">LIVE INPUT // НЕЗАВИСИМО ОТ СТОРОНЫ ВСЕ ХОДЫ ОБЕИХ СТОРОН ВНОСИШЬ ТЫ</div>}{outcome&&<div className="warning">GAME//STATE · {outcome}</div>}<div className="boardLayout"><section className="boardCard"><div className="boardFrame"><Chessboard options={{position:game.fen(),boardOrientation:side,onPieceDrop:({sourceSquare,targetSquare})=>!!targetSquare&&drop(sourceSquare,targetSquare),boardStyle:{borderRadius:'0',boxShadow:'none'}}}/></div><div className="boardActions"><button className="secondary" onClick={()=>reset()}>RESET//GAME</button><button className="primary" onClick={()=>analyze()} disabled={busy}>{busy?'ANALYZING…':'ANALYZE//NOW'}</button></div></section><aside className="coachPanel"><div className="coachHead"><div className="avatar">AI</div><div><b>COACH//{mode==='live'?'LIVE':'ENGINE'}</b><span>{busy?'CALCULATING VARIANTS…':'POSITION READY'}</span></div></div>{coach?.error?<div className="warning">API//ERROR · {coach.error}</div>:coach?<><div className="bestMove"><span>ЛУЧШИЙ//ХОД</span><strong>{label(coach.best_move)||'—'}</strong><em>{evalText}</em></div><div className="priority">ПРИОРИТЕТ // <b>{coach.priority}</b></div>{coach.hints?.map((h:string)=><div className="hint" key={h}>{h}</div>)}<div className="candidateTitle">КАНДИДАТЫ</div><div className="candidates">{coach.candidates?.map((c:any)=><div className="candidate" key={c.rank}><b>{String(c.rank).padStart(2,'0')}</b><div><strong>{label(c)}</strong><p>{c.reason}</p><small>{line(c)?.slice(0,5).join(' · ')}</small></div></div>)}</div>{coach.master_insight?.available&&<div className="masterBlock"><div className="candidateTitle">MASTER//PATTERNS</div><p className="masterLead">Похожие структуры из {coach.master_insight.positions} мастерских позиций.</p>{coach.master_insight.plans?.slice(0,3).map((p:any,i:number)=><div className="masterPlan" key={p.id}><b>{String(i+1).padStart(2,'0')}</b><span>{p.name}</span></div>)}{coach.master_insight.top_players?.length>0&&<small>Похожие примеры: {coach.master_insight.top_players.slice(0,4).join(' · ')}</small>}</div>}</>:<div className="emptyCoach"><b>SYSTEM//READY</b><p>{mode==='live'?'Вноси ходы обеих сторон вручную.':'Сделай ход. Если выбраны чёрные, движок сделает первый ход белыми.'}</p></div>}<div className="history"><b>MOVE//LOG</b><p>{historySan.length?historySan.join('  '):'no moves yet_'}</p></div></aside></div></div>
+  const [historyUci,setHistoryUci]=useState<string[]>([]);
+  const [historySan,setHistorySan]=useState<string[]>([]);
+  const [coach,setCoach]=useState<any>(null);
+  const [busy,setBusy]=useState(false);
+  const [side,setSide]=useState<Side>('white');
+  const [speed,setSpeed]=useState<Speed>('fast');
+  const [notation,setNotation]=useState<Notation>('ru');
+  const [outcome,setOutcome]=useState('');
+
+  const game=useMemo(()=>build(historyUci),[historyUci]);
+  const turn=game.turn();
+
+  async function analyze(g=game,h=historyUci){
+    setBusy(true);
+    try{
+      setCoach(await api('/api/coach/analyze',{
+        method:'POST',
+        body:JSON.stringify({fen:g.fen(),speed,player_side:side,history_uci:h})
+      }));
+    }catch(e:any){
+      setCoach({error:e.message});
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function checkOutcome(g:Chess){
+    if(g.isCheckmate())return `МАТ // победили ${g.turn()==='w'?'чёрные':'белые'}`;
+    if(g.isStalemate())return 'ПАТ // ничья';
+    if(g.isThreefoldRepetition())return 'ТРОЕКРАТНОЕ ПОВТОРЕНИЕ // можно заявить ничью';
+    if(g.isDraw())return 'НИЧЬЯ';
+    return '';
+  }
+
+  async function botMove(h:string[]){
+    const g=build(h);
+    if(g.isGameOver())return;
+    setBusy(true);
+    try{
+      const r:any=await api('/api/engine/move',{
+        method:'POST',
+        body:JSON.stringify({fen:g.fen(),speed,history_uci:h,player_side:side})
+      });
+      if(r.move_uci){
+        const nh=[...h,r.move_uci];
+        const ng=build(nh);
+        setHistoryUci(nh);
+        setHistorySan(x=>[...x,r.move_san]);
+        setOutcome(checkOutcome(ng));
+        // In PLAY mode Coach is most useful when it is your turn. Analyze only
+        // after the engine has replied instead of wasting a second engine call
+        // on the intermediate position.
+        await analyze(ng,nh);
+      }
+    }catch(e:any){
+      setCoach({error:e.message});
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function drop(s:string,t:string){
+    if(busy||outcome)return false;
+    if(mode==='play'&&turn!==side[0])return false;
+    const preview=build(historyUci);
+    let m:any;
+    try{m=preview.move({from:s,to:t,promotion:'q'} as any)}catch{return false}
+    if(!m)return false;
+    const u=s+t+(m.promotion||'');
+    const nh=[...historyUci,u];
+    const ng=build(nh);
+    setHistoryUci(nh);
+    setHistorySan(x=>[...x,m.san]);
+    const end=checkOutcome(ng);
+    setOutcome(end);
+
+    if(mode==='live'){
+      analyze(ng,nh);
+    }else if(!end&&!ng.isGameOver()){
+      // No artificial 320 ms pause: send the engine request immediately.
+      botMove(nh);
+    }
+    return true;
+  }
+
+  function reset(newSide=side){
+    setHistoryUci([]);
+    setHistorySan([]);
+    setCoach(null);
+    setOutcome('');
+    if(mode==='play'&&newSide==='black')botMove([]);
+  }
+
+  function chooseSide(s:Side){
+    setSide(s);
+    reset(s);
+  }
+
+  const evalText=useMemo(()=>{
+    const cp=coach?.best_move?.score_cp;
+    if(cp==null)return '—';
+    if(Math.abs(cp)>90000)return coach?.best_move?.mate?`мат ${Math.abs(coach.best_move.mate)}`:'—';
+    return `${cp>=0?'+':''}${(cp/100).toFixed(2)}`;
+  },[coach]);
+
+  const label=(c:any)=>notation==='ru'?c?.move_ru:c?.move_san;
+  const line=(c:any)=>notation==='ru'?c?.line_ru:c?.line_san;
+  const ms=coach?.performance?.total_ms;
+
+  return <div className="gameShell">
+    <div className="gameToolbar">
+      <div className="segmented">
+        <span>{mode==='live'?'МОЯ СТОРОНА / ВИД':'МОЯ СТОРОНА'}</span>
+        <button className={side==='white'?'selected':''} onClick={()=>chooseSide('white')}>БЕЛЫЕ</button>
+        <button className={side==='black'?'selected':''} onClick={()=>chooseSide('black')}>ЧЁРНЫЕ</button>
+      </div>
+      <div className="turnStatus"><i className={turn==='w'?'whiteDot':'blackDot'}></i><span>ХОД // {turn==='w'?'БЕЛЫЕ':'ЧЁРНЫЕ'}</span></div>
+      <div className="segmented">
+        <span>НОТАЦИЯ</span>
+        <button className={notation==='ru'?'selected':''} onClick={()=>setNotation('ru')}>РУС</button>
+        <button className={notation==='san'?'selected':''} onClick={()=>setNotation('san')}>SAN</button>
+      </div>
+      <div className="segmented">
+        <span>СКОРОСТЬ</span>
+        {(['fast','balanced','deep'] as Speed[]).map(s=><button key={s} className={speed===s?'selected':''} onClick={()=>setSpeed(s)}>{s==='fast'?'FAST':s==='balanced'?'NORMAL':'DEEP'}</button>)}
+      </div>
+    </div>
+
+    {mode==='live'&&<div className="liveRule">LIVE INPUT // НЕЗАВИСИМО ОТ СТОРОНЫ ВСЕ ХОДЫ ОБЕИХ СТОРОН ВНОСИШЬ ТЫ · FAST ПО УМОЛЧАНИЮ</div>}
+    {outcome&&<div className="warning">GAME//STATE · {outcome}</div>}
+
+    <div className="boardLayout">
+      <section className="boardCard">
+        <div className="boardFrame"><Chessboard options={{position:game.fen(),boardOrientation:side,onPieceDrop:({sourceSquare,targetSquare})=>!!targetSquare&&drop(sourceSquare,targetSquare),boardStyle:{borderRadius:'0',boxShadow:'none'}}}/></div>
+        <div className="boardActions">
+          <button className="secondary" onClick={()=>reset()}>RESET//GAME</button>
+          <button className="primary" onClick={()=>analyze()} disabled={busy}>{busy?'ANALYZING…':'ANALYZE//NOW'}</button>
+        </div>
+      </section>
+
+      <aside className="coachPanel">
+        <div className="coachHead">
+          <div className="avatar">AI</div>
+          <div><b>COACH//{mode==='live'?'LIVE':'ENGINE'}</b><span>{busy?'CALCULATING VARIANTS…':ms!=null?`READY // ${ms} MS`:'POSITION READY'}</span></div>
+        </div>
+        {coach?.error?<div className="warning">API//ERROR · {coach.error}</div>:coach?<>
+          <div className="bestMove"><span>ЛУЧШИЙ//ХОД</span><strong>{label(coach.best_move)||'—'}</strong><em>{evalText}</em></div>
+          <div className="priority">ПРИОРИТЕТ // <b>{coach.priority}</b></div>
+          {coach.hints?.map((h:string)=><div className="hint" key={h}>{h}</div>)}
+          <div className="candidateTitle">КАНДИДАТЫ</div>
+          <div className="candidates">{coach.candidates?.map((c:any)=><div className="candidate" key={c.rank}><b>{String(c.rank).padStart(2,'0')}</b><div><strong>{label(c)}</strong><p>{c.reason}</p><small>{line(c)?.slice(0,5).join(' · ')}</small></div></div>)}</div>
+          {coach.master_insight?.available&&<div className="masterBlock"><div className="candidateTitle">MASTER//PATTERNS</div><p className="masterLead">Похожие структуры из {coach.master_insight.positions} мастерских позиций.</p>{coach.master_insight.plans?.slice(0,3).map((p:any,i:number)=><div className="masterPlan" key={p.id}><b>{String(i+1).padStart(2,'0')}</b><span>{p.name}</span></div>)}{coach.master_insight.top_players?.length>0&&<small>Похожие примеры: {coach.master_insight.top_players.slice(0,4).join(' · ')}</small>}</div>}
+          {coach.master_insight?.deferred&&speed==='fast'&&<div className="masterBlock"><div className="candidateTitle">MASTER//PATTERNS</div><p className="masterLead">FAST не ждёт загрузки мастерской библиотеки. Переключи NORMAL/DEEP, если нужен полный поиск аналогий.</p></div>}
+        </>:<div className="emptyCoach"><b>SYSTEM//READY</b><p>{mode==='live'?'Вноси ходы обеих сторон вручную. FAST включён по умолчанию.':'Сделай ход. Если выбраны чёрные, движок сразу сделает первый ход белыми.'}</p></div>}
+        <div className="history"><b>MOVE//LOG</b><p>{historySan.length?historySan.join('  '):'no moves yet_'}</p></div>
+      </aside>
+    </div>
+  </div>;
 }

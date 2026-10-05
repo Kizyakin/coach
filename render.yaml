@@ -6,14 +6,13 @@ services:
     rootDir: backend
     healthCheckPath: /api/health
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: chess-coach-db
-          property: connectionString
       - key: STOCKFISH_PATH
         value: /usr/games/stockfish
       - key: FRONTEND_ORIGIN
         sync: false
+      # DATABASE_URL is intentionally optional. Core chess features do not
+      # depend on PostgreSQL, so an expired/missing DB can never take the API down.
+
   - type: web
     name: chess-coach-web
     runtime: static
@@ -23,9 +22,3 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false
-
-databases:
-  - name: chess-coach-db
-    plan: free
-    databaseName: chess_coach
-    user: chess_coach

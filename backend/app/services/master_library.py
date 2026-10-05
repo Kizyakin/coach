@@ -27,6 +27,7 @@ class MasterLibrary:
     def __init__(self):
         self._records=None
         self._buckets={}
+        self._cache={}
 
     def _load(self):
         if self._records is not None:return
@@ -43,9 +44,17 @@ class MasterLibrary:
     def count(self):
         self._load();return len(self._records)
 
-    def status(self):
-        self._load()
-        return {"available":bool(self._records),"positions":len(self._records),"players":len(MASTER_PLAYERS),"path":str(LIB_PATH.name)}
+    def status(self, force_load: bool = False):
+        if force_load:
+            self._load()
+        loaded = self._records is not None
+        return {
+            "available": bool(self._records) if loaded else LIB_PATH.exists(),
+            "loaded": loaded,
+            "positions": len(self._records) if loaded else None,
+            "players": len(MASTER_PLAYERS),
+            "path": str(LIB_PATH.name),
+        }
 
     def _material_sig(self,b:chess.Board):
         out=[]
@@ -77,16 +86,31 @@ class MasterLibrary:
         if nonpawn<=20:return "endgame"
         return "middlegame"
 
-    def find_patterns(self,b:chess.Board,limit:int=10):
+    def find_patterns(self,b:chess.Board,limit:int=10,fast:bool=False):
+        # FAST Live Coach must never block on first-time gzip loading or a large
+        # similarity scan. Master patterns are supplementary to the immediate
+        # engine answer, so we defer them until the library is warm.
+        if fast and self._records is None:
+            return {"available":False,"deferred":True,"positions":0,"players":len(MASTER_PLAYERS),"plans":[],"examples":[]}
         self._load()
         if not self._records:
             return {"available":False,"positions":0,"players":len(MASTER_PLAYERS),"plans":[],"examples":[]}
+        cache_key=(b.board_fen(), b.turn, self.phase(b), limit, fast)
+        cached=self._cache.get(cache_key)
+        if cached is not None:
+            return cached
         key=("w" if b.turn else "b",self._material_sig(b))
         idxs=self._buckets.get(key)
         if not idxs:
             idxs=range(len(self._records))
+        # Cap work in FAST mode. This is deterministic and keeps the request
+        # latency bounded even with tens of thousands of master positions.
+        if fast:
+            seq=list(idxs)
+            if len(seq)>900:
+                step=max(1,len(seq)//900)
+                idxs=seq[::step][:900]
         scored=[]
-        # cap full scans so free Render remains responsive
         for i in idxs:
             r=self._records[i];s=self._sim(b,r)
             if s>=.34:scored.append((s,r))
@@ -103,6 +127,10 @@ class MasterLibrary:
                 "player":r.get("player_ru") or r.get("player"),"opponent":r.get("opponent"),"year":r.get("year"),
                 "move_san":r.get("move_san"),"move_uci":r.get("move_uci"),"plans":[PLAN_RU.get(x,x) for x in r.get("plans",[])],"similarity":round(s,2),"result":r.get("result")
             })
-        return {"available":True,"positions":len(self._records),"players":len(MASTER_PLAYERS),"plans":plan_list,"top_players":[p for p,_ in players.most_common(4)],"examples":examples}
+        result={"available":True,"positions":len(self._records),"players":len(MASTER_PLAYERS),"plans":plan_list,"top_players":[p for p,_ in players.most_common(4)],"examples":examples}
+        if len(self._cache)>256:
+            self._cache.clear()
+        self._cache[cache_key]=result
+        return result
 
 master_library=MasterLibrary()

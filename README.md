@@ -53,11 +53,11 @@ npm run dev
 4. Для `chess-coach-api` указать `FRONTEND_ORIGIN=https://<имя-web>.onrender.com`.
 5. Запустить deploy.
 
-### Ограничения Render Free
+### Render Free и база данных
 
-- Web Service засыпает после 15 минут без входящего трафика и затем «просыпается» при новом запросе.
-- Бесплатный Postgres ограничен 1 GB и истекает через 30 дней. Код использует стандартный `DATABASE_URL`, поэтому позже БД можно без изменений приложения перенести на другой PostgreSQL.
-- Файлы внутри Web Service непостоянны, поэтому SQLite на Render не использовать для пользовательских данных.
+- Web Service засыпает после простоя; первый запрос после сна зависит от cold start Render.
+- Начиная с v1.5 PostgreSQL **не обязателен для запуска**. Если `DATABASE_URL` отсутствует или база истекла, все шахматные функции продолжают работать без persistence.
+- Для постоянных аккаунтов/прогресса позже можно подключить любой PostgreSQL через `DATABASE_URL`, не меняя шахматное ядро.
 
 ## API
 
@@ -98,3 +98,8 @@ cd ..
 ```
 
 После этого закоммить `backend/app/data/master_library/master_positions.json.gz` и отправь его в GitHub. Raw PGN не сохраняются.
+
+
+## Performance Mode (v1.5)
+
+Live Coach по умолчанию использует `FAST`: один постоянно запущенный Stockfish, ~120 ms engine budget, MultiPV=3, RAM-кэш позиций и неблокирующий Master Games слой. `NORMAL` и `DEEP` доступны из интерфейса для более подробного анализа.
