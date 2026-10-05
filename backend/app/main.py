@@ -7,6 +7,7 @@ from app.api.routes import router
 from app.core.config import settings
 from app.core.db import init_database
 from app.services.engine import engine_service
+from app.services.master_library import master_library
 import app.core.models  # noqa: F401  (register SQLAlchemy models before DB init)
 
 
@@ -18,11 +19,17 @@ async def lifespan(app: FastAPI):
         engine_service.start()
     except Exception as exc:
         print(f"[stockfish] warm-up failed, lazy retry will be used: {exc}")
+    # Load the compact hash index before the first Live Coach request.
+    # This is bounded startup work and keeps master lookup off the hot path.
+    try:
+        master_library.preload_fast()
+    except Exception as exc:
+        print(f"[masters] fast-index preload failed: {exc}")
     yield
     engine_service.stop()
 
 
-app = FastAPI(title=settings.app_name, version="1.5.0", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version="1.6.0", lifespan=lifespan)
 
 origins = ["*"] if settings.frontend_origin == "*" else [settings.frontend_origin, "*"]
 app.add_middleware(

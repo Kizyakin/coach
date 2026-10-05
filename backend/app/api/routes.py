@@ -42,7 +42,7 @@ def health():
     return {
         "ok": True,
         "service": "Шахматный тренер",
-        "version": "1.5",
+        "version": "1.6",
         "database": database_status(),
         "stockfish": engine_service.status(),
         # Must not force-load the large master library on a health check.

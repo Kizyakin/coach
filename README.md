@@ -103,3 +103,18 @@ cd ..
 ## Performance Mode (v1.5)
 
 Live Coach по умолчанию использует `FAST`: один постоянно запущенный Stockfish, ~120 ms engine budget, MultiPV=3, RAM-кэш позиций и неблокирующий Master Games слой. `NORMAL` и `DEEP` доступны из интерфейса для более подробного анализа.
+
+## FAST master positions (v1.6)
+
+Live Coach 1.6 uses a pre-aggregated master-position hash index instead of scanning the full case library at request time. Build it once locally before pushing to GitHub:
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/build_master_library.py --players 45 --games-per-player 60 --positions-per-game 12
+cd ..
+```
+
+Commit `backend/app/data/master_library/master_fast_index.json.gz`. Raw PGNs are not stored. On API startup the compact index is preloaded into RAM, so FAST Coach performs only O(1) dictionary lookups.

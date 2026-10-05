@@ -19,8 +19,8 @@ class AnalysisProfile:
 
 PROFILES = {
     # Designed for Live Coach. On a warm Render worker the engine itself should
-    # usually spend only ~120 ms here.
-    "fast": AnalysisProfile(time=0.12, multipv=3, pv_len=8),
+    # usually spend only ~90 ms here.
+    "fast": AnalysisProfile(time=0.09, multipv=3, pv_len=8),
     "balanced": AnalysisProfile(time=0.35, multipv=5, pv_len=10),
     "deep": AnalysisProfile(time=1.00, multipv=8, pv_len=14),
 }
